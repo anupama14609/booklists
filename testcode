@@ -1,0 +1,152 @@
+<!-- Button trigger modal -->
+<button type="button" class="btn btn-primary js-create-book" data-toggle="modal" data-target="#exampleModal">
+    Launch demo modal
+  </button>
+  
+  <!-- Modal -->
+  <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+       {% for field in form %}
+            <div class="form-group {% if field.error %} has-error {% endif %}">
+                <label for="{{field.id_for_label}}">{{field.label}}</label>
+                {% render_field field class="form-control" %}
+                {% for error in field.errors %}
+                <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            </div>
+       {% endfor %}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+ $.ajax({
+        url: '/books/create/',
+        type: 'get',
+        dataType: 'json',
+        beforeSend: function () {
+          $("#modal-book").modal("show");
+        },
+        success: function (data) {
+          $("#modal-book .modal-content").html(data.html_form);
+        }
+      });
+    });
+
+
+
+def AddBook(request):
+    form = BookForm()
+    context = {'form': form}
+    
+    html_form = render_to_string('books/includes/partial_book_create.html', 
+    context, 
+    request=request)
+    return JsonResponse({'html_form':html_form})
+
+  
+def CreateBook(request):
+    data = dict()
+    if request.method == 'POST':
+        form = BookForm(request.POST)
+        if form.is_valid():
+            form.save()
+            data['form_is_valid'] = True
+        else:
+            data['form_is_valid'] = False
+    else:
+        form = BookForm()
+
+    context = {'form': form}
+    data['html_form'] = render_to_string('books/includes/partial_book_create.html',
+        context,
+        request=request
+    )
+    return JsonResponse(data)
+
+
+  $("#modal-book").on("submit", ".js-book-create-form", function () {
+    var form = $(this);
+    $.ajax({
+      url: form.attr("action"),
+      data: form.serialize(),
+      type: form.attr("method"),
+      dataType: 'json',
+      success: function (data) {
+        if (data.form_is_valid) {
+          alert("Book created!");  // <-- This is just a placeholder for now for testing
+        }
+        else {
+          $("#modal-book .modal-content").html(data.html_form);
+        }
+      }
+    });
+    return false;
+  });
+
+
+<form method="post" action="{% url 'book_create' %}" class="js-book-create-form">
+  {% csrf_token %}
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 class="modal-title">Create a new book</h4>
+  </div>
+  <div class="modal-body">
+    {% for field in form %}
+      <div class="form-group{% if field.errors %} has-error{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {% render_field field class="form-control" %}
+        {% for error in field.errors %}
+          <p class="help-block">{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="submit" class="btn btn-primary">Create book</button>
+  </div>
+</form>
+
+{% for book in books %}
+  <tr>
+    <td>{{ book.id }}</td>
+    <td>{{ book.title }}</td>
+    <td>{{ book.author }}</td>
+    <td>{{ book.get_book_type_display }}</td>
+    <td>{{ book.publication_date }}</td>
+    <td>{{ book.pages }}</td>
+    <td>{{ book.price }}</td>
+  </tr>
+{% empty %}
+  <tr>
+    <td colspan="7" class="text-center bg-warning">No book</td>
+  </tr>
+{% endfor %}
+
+from django.urls import path 
+from django.conf.urls import url, include
+from . import views
+
+urlpatterns = [
+    url(r'^books/$', views.book_list, name='book_list'),
+    url(r'^books/create/$', views.book_create, name='book_create'),
+    url(r'^books/(?P<pk>\d+)/update/$', views.book_update, name='book_update'),
+    path('books/update/<pk>', views.book_update, name='book_update'),
+    # url(r'^books/(?P<pk>\d+)/delete/$', views.book_delete, name='book_delete'),
+]
